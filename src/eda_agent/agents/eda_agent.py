@@ -10,8 +10,7 @@ class EDAAgent:
     def run(self, tool_names, data):
         results = []
         for name in tool_names:
-            tool = self.registry.get_tool(name)
-            result = tool.run(data)
+            tool_fn = self.registry.get_tool(name)
+            result = tool_fn(data)
             results.append(result)
         return self.formatter.format(results)
-
