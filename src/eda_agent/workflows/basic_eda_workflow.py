@@ -1,20 +1,45 @@
+import mlflow
 from ..services.spark_service import SparkService
 from ..agents.eda_agent import EDAAgent
 from ..tools.csv_to_delta_tool import csv_to_delta_table
+from .init_flow import InitFlow
+from .execution_flow import ExecutionFlow
 
 class BasicEDAWorkflow:
-    """Deterministic workflow for EDA."""
-    def __init__(self, csv_path: str, table_name: str):
-        self.csv_path = csv_path
-        self.table_name = table_name
-        self.agent = EDAAgent()
+    """
+    Orchestrates the two-phase EDA workflow: InitFlow and ExecutionFlow.
+    """
+    def __init__(self):
+        self.init_flow = InitFlow()
+        self.execution_flow = ExecutionFlow()
+        self.phase = "INIT"
+        self.mlflow_run = None
 
-    def run(self):
-        # Step 1: Ingest CSV to Delta
-        ingest_result = csv_to_delta_table(self.csv_path, self.table_name)
-        if "error" in ingest_result:
-            return ingest_result
-        # Step 2: Run EDA tools on Delta table
-        tool_names = ["summary_statistics", "missing_value_analysis"]
-        # Pass table name as data reference
-        return self.agent.run(tool_names, ingest_result["table_name"])
+    def initialize_from_csv(self, csv_path: str, table_name: str):
+        if self.mlflow_run is None:
+            self.mlflow_run = mlflow.start_run(run_name=f"EDA_{table_name}")
+        mlflow.log_param("csv_path", csv_path)
+        mlflow.log_param("table_name", table_name)
+        result = self.init_flow.upload_csv(csv_path, table_name)
+        mlflow.log_dict(result, "ingest_result.json")
+        if result.get("status") == "success":
+            self.phase = "EXECUTION"
+        return result
+
+    def initialize_from_delta(self, table_name: str):
+        if self.mlflow_run is None:
+            self.mlflow_run = mlflow.start_run(run_name=f"EDA_{table_name}")
+        mlflow.log_param("table_name", table_name)
+        result = self.init_flow.load_delta(table_name)
+        mlflow.log_dict(result, "load_result.json")
+        if result.get("status") == "success":
+            self.phase = "EXECUTION"
+        return result
+
+    def execute_tools(self, tool_names):
+        if self.phase != "EXECUTION":
+            return {"error": "Data not loaded. Please initialize with CSV or Delta table first."}
+        mlflow.log_param("tool_names", tool_names)
+        result = self.execution_flow.execute(tool_names)
+        mlflow.log_dict(result, "eda_results.json")
+        return result
