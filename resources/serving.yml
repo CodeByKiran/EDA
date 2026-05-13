@@ -1,0 +1,12 @@
+resources:
+  model_serving_endpoints:
+    eda_agent_serving:
+      name: eda_agent_serving
+      config:
+        served_models:
+          - name: eda_agent_pyfunc
+            model_name: catalog.schema.eda_agent_pyfunc
+            model_version: 1
+            workload_size: Small
+            scale_to_zero_enabled: true
+

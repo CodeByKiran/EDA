@@ -1,0 +1,24 @@
+bundle:
+  name: eda-agent-db
+
+include:
+  - resources/*.yml
+
+targets:
+  dev:
+    default: true
+    workspace:
+      host: ${env.DATABRICKS_HOST}
+    resources:
+      jobs:
+        eda_agent_job:
+          name: eda-agent-job-dev
+      model_serving_endpoints:
+        eda_agent_serving:
+          name: eda-agent-serving-dev
+
+artifacts:
+  default:
+    type: whl
+    path: .
+
