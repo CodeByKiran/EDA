@@ -1,4 +1,3 @@
-import pandas as pd
 from ..services.spark_service import SparkService
 
 class EDA:
@@ -23,4 +22,3 @@ class EDA:
             pandas_df = data
         missing = pandas_df.isnull().sum().to_dict()
         return {"tool": "missing_value_analysis", "result": missing}
-
